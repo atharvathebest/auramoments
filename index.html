@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Concordia — Element Alchemist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0c0a12;
+    --panel:#141122;
+    --panel-2:#1c1830;
+    --gold:#e2b659;
+    --gold-dim:#967735;
+    --teal:#4fb6a8;
+    --teal-glow: rgba(79, 182, 168, 0.4);
+    --ink:#f3eee3;
+    --muted:#7e7795;
+    --line: rgba(243,238,227,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: #05040a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    font-family:'Inter', sans-serif;
+  }
+  #app{
+    background: var(--void);
+    color: var(--ink);
+    width: 100%;
+    max-width: 1100px;
+    height: 720px;
+    border-radius: 20px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 72px 1fr;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px var(--line);
+  }
+  #header{
+    grid-column: 1 / -1;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(20, 17, 34, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  #header h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 24px;
+    margin:0;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, var(--ink) 30%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #header .sub{
+    font-size:12px;
+    color: var(--muted);
+    margin-top:2px;
+  }
+  #stats{
+    display:flex; gap:14px; align-items:center;
+  }
+  .stat{ text-align:right; margin-right: 8px; }
+  .stat .n{ font-family:'Fraunces', serif; font-size:20px; font-weight:600; color:var(--gold); }
+  .stat .l{ font-size:10px; text-transform: uppercase; letter-spacing: 1px; color:var(--muted); }
+  
+  .btn{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+  }
+  .btn:hover{ border-color: var(--gold-dim); color: var(--gold); background: var(--panel-2); }
+  #clear-canvas-btn { background: rgba(79, 182, 168, 0.1); border-color: rgba(79, 182, 168, 0.2); color: var(--teal); }
+  #clear-canvas-btn:hover { background: rgba(79, 182, 168, 0.2); border-color: var(--teal); color: #fff; }
+
+  #sidebar{
+    border-right: 1px solid var(--line);
+    padding: 16px;
+    display:flex; flex-direction:column;
+    background: rgba(12, 10, 18, 0.5);
+  }
+  #search{
+    width:100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  #search:focus{ outline:none; border-color: var(--gold-dim); }
+  
+  #element-list{
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1;
+    padding-right: 4px;
+  }
+  #element-list::-webkit-scrollbar { width: 6px; }
+  #element-list::-webkit-scrollbar-track { background: transparent; }
+  #element-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+  #element-list::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .element-chip{
+    display:flex; align-items:center; justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  .element-chip:hover{ border-color: var(--gold-dim); background: var(--panel-2); transform: translateY(-1px); }
+  .element-chip:active { transform: translateY(1px); }
+  .element-chip-left { display: flex; align-items: center; gap: 8px; }
+  .element-chip .emoji{ font-size: 18px; }
+  .element-chip .spawn-plus { font-size: 12px; color: var(--muted); opacity: 0; transition: opacity 0.2s; }
+  .element-chip:hover .spawn-plus { opacity: 1; }
+
+  .element-chip.new-glow{
+    animation: glow 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  @keyframes glow{
+    0%{ border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 20px var(--gold); }
+    100%{ border-color: var(--line); box-shadow: none; }
+  }
+
+  #canvas{
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(79,182,168,0.06), transparent 45%),
+      radial-gradient(circle at 90% 80%, rgba(217,169,75,0.08), transparent 45%);
+  }
+  #canvas::before{
+    content:'';
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(237,230,214,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events:none;
+  }
+  #hint{
+    position:absolute; top:20px; left:50%; transform:translateX(-50%);
+    font-size: 12px; color: var(--muted);
+    pointer-events:none;
+    text-align:center;
+    z-index: 1;
+    background: rgba(12, 10, 18, 0.6);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    backdrop-filter: blur(4px);
+  }
+  .tile{
+    position:absolute;
+    display:flex; align-items:center; gap:8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 16px;
+    cursor: grab;
+    font-size: 14px;
+    white-space:nowrap;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    user-select:none;
+    transition: transform 0.1s, box-shadow .15s, border-color 0.2s;
+    z-index: 2;
+  }
+  .tile:active{ cursor:grabbing; transform: scale(1.02); }
+  .tile.combining{
+    animation: pulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes pulse{
+    0%{ border-color: var(--teal); box-shadow: 0 0 8px var(--teal-glow); }
+    100%{ border-color: #fff; box-shadow: 0 0 20px var(--teal); }
+  }
+  .tile .emoji{ font-size: 20px; }
+  .tile .x{
+    margin-left: 6px; color: var(--muted); cursor:pointer; font-size: 14px;
+    padding: 0 4px; display: inline-block; transition: color 0.15s, transform 0.15s;
+  }
+  .tile .x:hover{ color: #ff6b6b; transform: scale(1.2); }
+
+  .sparkle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: sparkle-fade 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    z-index: 99;
+  }
+  @keyframes sparkle-fade {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.2); opacity: 0; }
+  }
+
+  #toast{
+    position:absolute; bottom:24px; left:50%; transform: translateX(-50%) translateY(15px);
+    background: rgba(20, 17, 34, 0.95);
+    border: 1px solid var(--gold);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(226, 182, 89, 0.2);
+    color: var(--gold);
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity .3s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+    display:flex; align-items:center; gap:8px;
+    backdrop-filter: blur(10px);
+  }
+  #toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 768px){
+    #app{ grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; height: 95vh; }
+    #sidebar{ border-right:none; border-bottom:1px solid var(--line); max-height: 220px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div>
+      <h1>Concordia</h1>
+      <div class="sub">Drag or click elements to combine them on the board</div>
+    </div>
+    <div id="stats">
+      <div class="stat"><div class="n" id="discovered-count">8</div><div class="l">discovered</div></div>
+      <button id="clear-canvas-btn" class="btn" title="Clear board without resetting progress">Clear Board</button>
+      <button id="reset" class="btn">Reset Progress</button>
+    </div>
+  </div>
+  <div id="sidebar">
+    <input id="search" type="text" placeholder="Search elements...">
+    <div id="element-list"></div>
+  </div>
+  <div id="canvas">
+    <div id="hint">Drag elements out, or simply <b>click</b> them in the list to spawn them!</div>
+    <div id="toast"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const BASE = [
+    {name:'Water', emoji:'💧'},
+    {name:'Fire', emoji:'🔥'},
+    {name:'Wind', emoji:'🌬️'},
+    {name:'Earth', emoji:'🌍'},
+    {name:'Light', emoji:'💡'},
+    {name:'Darkness', emoji:'🌑'},
+    {name:'Metal', emoji:'🛠️'},
+    {name:'Plant', emoji:'🌱'}
+  ];
+
+  const RECIPES = {
+    'fire+water': { name: 'Steam', emoji: '💨' },
+    'earth+water': { name: 'Mud', emoji: '💩' },
+    'fire+earth': { name: 'Lava', emoji: '🌋' },
+    'air+water': { name: 'Rain', emoji: '🌧️' },
+    'wind+water': { name: 'Wave', emoji: '🌊' },
+    'fire+metal': { name: 'Forge', emoji: '🏭' },
+    'darkness+light': { name: 'Eclipse', emoji: '🌑' },
+    'earth+plant': { name: 'Forest', emoji: '🌳' },
+    'fire+plant': { name: 'Ash', emoji: '🚬' },
+    'water+plant': { name: 'Algae', emoji: '🦠' },
+    'light+water': { name: 'Rainbow', emoji: '🌈' },
+    'metal+plant': { name: 'Blade', emoji: '🔪' },
+    'metal+wind': { name: 'Wind Chime', emoji: '🎐' },
+    'earth+fire': { name: 'Lava', emoji: '🌋' },
+    'lava+water': { name: 'Stone', emoji: '🪨' },
+    'stone+wind': { name: 'Sand', emoji: '⏳' },
+    'fire+stone': { name: 'Metal', emoji: '🛠️' },
+    'darkness+plant': { name: 'Poison Ivy', emoji: '🥀' },
+    'light+plant': { name: 'Flower', emoji: '🌸' },
+    'earth+earth': { name: 'Pressure', emoji: '💥' },
+    'pressure+stone': { name: 'Diamond', emoji: '💎' },
+    'steam+wind': { name: 'Cloud', emoji: '☁️' },
+    'cloud+water': { name: 'Rain', emoji: '🌧️' },
+    'cloud+electricity': { name: 'Storm', emoji: '⛈️' },
+    'fire+wind': { name: 'Smoke', emoji: '💨' },
+    'earth+wind': { name: 'Dust', emoji: '🧹' }
+  };
+
+  let discovered = [...BASE];
+  let placed = [];
+  let placedId = 0;
+  let pendingCombine = new Set();
+
+  const listEl = document.getElementById('element-list');
+  const canvasEl = document.getElementById('canvas');
+  const countEl = document.getElementById('discovered-count');
+  const toastEl = document.getElementById('toast');
+  const searchEl = document.getElementById('search');
+
+  function key(name){ return name.toLowerCase().trim(); }
+
+  async function loadState(){
+    try{
+      const res = localStorage.getItem('discovered-elements');
+      if(res){
+        const parsed = JSON.parse(res);
+        if(Array.isArray(parsed) && parsed.length){
+          discovered = parsed;
+        }
+      }
+    }catch(e){ }
+    renderList();
+  }
+
+  async function saveState(){
+    try{
+      localStorage.setItem('discovered-elements', JSON.stringify(discovered));
+    }catch(e){ }
+  }
+
+  function renderList(filter){
+    listEl.innerHTML = '';
+    const f = (filter || '').toLowerCase();
+    discovered
+      .filter(el => el.name.toLowerCase().includes(f))
+      .forEach(el => {
+        const chip = document.createElement('div');
+        chip.className = 'element-chip';
+        chip.draggable = true;
+        chip.dataset.name = el.name;
+        chip.dataset.emoji = el.emoji;
+        
+        chip.innerHTML = `
+          <div class="element-chip-left">
+            <span class="emoji">${el.emoji}</span>
+            <span>${el.name}</span>
+          </div>
+          <span class="spawn-plus">+</span>
+        `;
+        
+        chip.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({name: el.name, emoji: el.emoji, from: 'sidebar'}));
+        });
+
+        chip.addEventListener('click', () => {
+          const rect = canvasEl.getBoundingClientRect();
+          const x = rect.width / 2 + (Math.random() * 80 - 40);
+          const y = rect.height / 2 + (Math.random() * 80 - 40);
+          addTile(el.name, el.emoji, x, y);
+        });
+
+        listEl.appendChild(chip);
+      });
+    countEl.textContent = discovered.length;
+  }
+
+  searchEl.addEventListener('input', () => renderList(searchEl.value));
+
+  function showToast(msg){
+    toastEl.innerHTML = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+  }
+
+  canvasEl.addEventListener('dragover', e => e.preventDefault());
+  canvasEl.addEventListener('drop', e => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('text/plain');
+    if(!data) return;
+    const info = JSON.parse(data);
+    const rect = canvasEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if(info.from === 'sidebar'){
+      addTile(info.name, info.emoji, x, y);
+    } else if(info.from === 'tile'){
+      const tile = placed.find(t => t.id === info.id);
+      if(!tile) return;
+      const target = placed.find(t => t.id !== info.id && dist(t, {x,y}) < 50);
+      if(target){
+        tile.x = x; tile.y = y;
+        renderCanvas();
+        attemptCombine(tile.id, target.id);
+      } else {
+        tile.x = x; tile.y = y;
+        renderCanvas();
+      }
+    }
+  });
+
+  function dist(t, p){
+    return Math.hypot(t.x - p.x, t.y - p.y);
+  }
+
+  function addTile(name, emoji, x, y){
+    placed.push({id: placedId++, name, emoji, x, y});
+    renderCanvas();
+  }
+
+  function renderCanvas(){
+    canvasEl.querySelectorAll('.tile').forEach(n => n.remove());
+    placed.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'tile' + (pendingCombine.has(t.id) ? ' combining' : '');
+      el.style.left = (t.x - 50) + 'px';
+      el.style.top = (t.y - 20) + 'px';
+      el.draggable = !pendingCombine.has(t.id);
+      el.innerHTML = '<span class="emoji">'+t.emoji+'</span><span>'+t.name+'</span><span class="x" title="remove">✕</span>';
+      
+      el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({id: t.id, from: 'tile'}));
+      });
+
+      el.querySelector('.x').addEventListener('click', (e) => {
+        e.stopPropagation();
+        placed = placed.filter(p => p.id !== t.id);
+        renderCanvas();
+      });
+      canvasEl.appendChild(el);
+    });
+  }
+
+  function hashCombine(str1, str2) {
+    const combined = [str1, str2].sort().join('+');
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      hash = (hash << 5) - hash + combined.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function generateProceduralCombination(nameA, nameB) {
+    const keyString = [key(nameA), key(nameB)].sort().join('+');
+    
+    if (RECIPES[keyString]) {
+      return RECIPES[keyString];
+    }
+    const reverseKey = [key(nameB), key(nameA)].sort().join('+');
+    if (RECIPES[reverseKey]) {
+      return RECIPES[reverseKey];
+    }
+
+    const emojis = ['🔮', '✨', '🌪️', '💥', '🌌', '🧬', '🏺', '🛸', '🚀', '🧪', '💎', '🎨', '👑'];
+    const suffixes = ['Essence', 'Force', 'Fusion', 'Dust', 'Relic', 'Nova', 'Core', 'Plasma', 'Catalyst'];
+    
+    const h = hashCombine(nameA, nameB);
+    const selectedEmoji = emojis[h % emojis.length];
+    
+    const wordA = nameA.split(' ')[0];
+    const wordB = nameB.split(' ')[0];
+    const mixedName = wordA.slice(0, Math.ceil(wordA.length / 2)) + wordB.slice(Math.floor(wordB.length / 2));
+    const finalName = mixedName.charAt(0).toUpperCase() + mixedName.slice(1).toLowerCase() + ' ' + suffixes[h % suffixes.length];
+
+    return { name: finalName, emoji: selectedEmoji };
+  }
+
+  function createVisualSparks(x, y) {
+    for(let i=0; i<12; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'sparkle';
+      sparkle.style.left = x + 'px';
+      sparkle.style.top = y + 'px';
+      sparkle.style.width = sparkle.style.height = (Math.random() * 8 + 6) + 'px';
+      sparkle.style.background = Math.random() > 0.5 ? 'var(--gold)' : 'var(--teal)';
+      
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = Math.random() * 80 + 40;
+      sparkle.style.setProperty('--tx', Math.cos(angle) * velocity + 'px');
+      sparkle.style.setProperty('--ty', Math.sin(angle) * velocity + 'px');
+      
+      canvasEl.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 800);
+    }
+  }
+
+  async function attemptCombine(idA, idB){
+    const a = placed.find(t => t.id === idA);
+    const b = placed.find(t => t.id === idB);
+    if(!a || !b) return;
+    pendingCombine.add(a.id);
+    pendingCombine.add(b.id);
+    renderCanvas();
+
+    const midX = (a.x + b.x) / 2;
+    const midY = (a.y + b.y) / 2;
+
+    setTimeout(() => {
+      const result = generateProceduralCombination(a.name, b.name);
+      placed = placed.filter(t => t.id !== a.id && t.id !== b.id);
+
+      const isNew = !discovered.some(el => key(el.name) === key(result.name));
+      if(isNew){
+        discovered.push(result);
+        saveState();
+        showToast('🌟 New discovery: <b>' + result.emoji + ' ' + result.name + '</b>!');
+      } else {
+        showToast('Made ' + result.emoji + ' <b>' + result.name + '</b>');
+      }
+
+      addTile(result.name, result.emoji, midX, midY);
+      createVisualSparks(midX, midY);
+      
+      pendingCombine.delete(a.id);
+      pendingCombine.delete(b.id);
+      renderList(searchEl.value);
+    }, 300);
+  }
+
+  document.getElementById('clear-canvas-btn').addEventListener('click', () => {
+    placed = [];
+    renderCanvas();
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if(confirm('Are you sure you want to completely reset your progress?')){
+      discovered = [...BASE];
+      placed = [];
+      saveState();
+      renderList();
+      renderCanvas();
+    }
+  });
+
+  loadState();
+})();
+</script>
+</body>
+</html>
